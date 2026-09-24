@@ -2,14 +2,21 @@ name: Night Shift probe contract
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'probe/night-shift-v0.1'
     paths:
       - '.night-shift/**'
       - '.github/workflows/night-shift-probe-ci.yml'
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   contract:
@@ -23,3 +30,82 @@ jobs:
         run: node --test .night-shift/test/policy.test.mjs
       - name: Validate n8n workflow structure
         run: node .night-shift/test/validate-workflow.mjs
+
+  adversarial-gates:
+    if: startsWith(github.head_ref, 'probe/night-shift-x-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Scope gate
+        id: scope
+        continue-on-error: true
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .night-shift/test/validate-pr.mjs
+
+      - name: Secret scan
+        id: security
+        if: steps.scope.outcome == 'success'
+        continue-on-error: true
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute deterministic verdict
+        id: verdict
+        if: always()
+        env:
+          SCOPE_OUTCOME: ${{ steps.scope.outcome }}
+          SECURITY_OUTCOME: ${{ steps.security.outcome }}
+        run: |
+          if [ "$SCOPE_OUTCOME" != "success" ]; then
+            echo "verdict=SCOPE_BLOCK" >> "$GITHUB_OUTPUT"
+          elif [ "$SECURITY_OUTCOME" != "success" ]; then
+            echo "verdict=SECURITY_BLOCK" >> "$GITHUB_OUTPUT"
+          else
+            echo "verdict=PASS" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build per-task execution summary
+        if: always()
+        env:
+          VERDICT: ${{ steps.verdict.outputs.verdict }}
+          SCOPE_OUTCOME: ${{ steps.scope.outcome }}
+          SECURITY_OUTCOME: ${{ steps.security.outcome }}
+        run: |
+          {
+            echo "<!-- night-shift-x-test-summary -->"
+            echo "### Night-Shift Execution Summary"
+            echo
+            echo "- Run: \`$GITHUB_RUN_ID\`"
+            echo "- Head: \`$GITHUB_HEAD_REF\`"
+            echo "- Base SHA: \`${{ github.event.pull_request.base.sha }}\`"
+            echo "- Scope gate: \`$SCOPE_OUTCOME\`"
+            echo "- Security gate: \`$SECURITY_OUTCOME\`"
+            echo "- Verdict: **$VERDICT**"
+            echo "- Cost: \`DATA_GAP\`"
+            echo "- Merge authority: \`false\`"
+          } > /tmp/night-shift-summary.md
+          cat /tmp/night-shift-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment summary on PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/night-shift-summary.md
+
+      - name: Enforce gate verdict
+        if: always() && steps.verdict.outputs.verdict != 'PASS'
+        run: |
+          echo "Night Shift gate blocked PR: ${{ steps.verdict.outputs.verdict }}"
+          exit 1
