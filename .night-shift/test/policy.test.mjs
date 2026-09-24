@@ -39,10 +39,12 @@ test('lock release is a finally invariant', () => {
 });
 
 test('morning report and eval derive from execution records', () => {
-  const runs=[{runId:'r1',issue:101,state:'PR_OPEN',pr:88,ci:'PASS',costUsd:1.25,attempts:1,model:'copilot',runtimeSeconds:300,validationResult:'PASS'}];
+  const runs=[{runId:'r1',issue:101,state:'PR_OPEN',pr:88,ci:'PASS',costUsd:null,attempts:1,model:'copilot',runtimeSeconds:300,validationResult:'PASS'}];
   const report=buildMorningReport(runs);
   assert.equal(report.totals.tasks,1);
-  assert.equal(report.totals.costUsd,1.25);
+  assert.equal(report.totals.knownCostUsd,0);
+  assert.equal(report.totals.unknownCostCount,1);
+  assert.equal(report.tasks[0].costUsd,null);
   const evalRecord=toEvalRecord(runs[0],{outcome:'ACCEPT',repairMinutes:0,mergeStatus:'UNMERGED'});
   assert.equal(evalRecord.humanOutcome,'ACCEPT');
   assert.equal(evalRecord.modelEscalation,false);
