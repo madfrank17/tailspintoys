@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: '22'
       - name: Run policy contract tests
-        run: node --test .night-shift/test/policy.test.mjs
+        run: node --test .night-shift/test/policy.test.mjs .night-shift/test/security.test.mjs
       - name: Validate n8n workflow structure
         run: node .night-shift/test/validate-workflow.mjs
 
@@ -53,9 +53,18 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node .night-shift/test/validate-pr.mjs
 
-      - name: Secret scan
-        id: security
+      - name: Deterministic secret-pattern gate
+        id: pattern
         if: steps.scope.outcome == 'success'
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .night-shift/test/scan-diff-secrets.mjs
+
+      - name: Gitleaks defense-in-depth scan
+        id: gitleaks
+        if: steps.scope.outcome == 'success' && steps.pattern.outcome == 'success'
         continue-on-error: true
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -66,11 +75,12 @@ jobs:
         if: always()
         env:
           SCOPE_OUTCOME: ${{ steps.scope.outcome }}
-          SECURITY_OUTCOME: ${{ steps.security.outcome }}
+          PATTERN_OUTCOME: ${{ steps.pattern.outcome }}
+          GITLEAKS_OUTCOME: ${{ steps.gitleaks.outcome }}
         run: |
           if [ "$SCOPE_OUTCOME" != "success" ]; then
             echo "verdict=SCOPE_BLOCK" >> "$GITHUB_OUTPUT"
-          elif [ "$SECURITY_OUTCOME" != "success" ]; then
+          elif [ "$PATTERN_OUTCOME" != "success" ] || [ "$GITLEAKS_OUTCOME" != "success" ]; then
             echo "verdict=SECURITY_BLOCK" >> "$GITHUB_OUTPUT"
           else
             echo "verdict=PASS" >> "$GITHUB_OUTPUT"
@@ -81,7 +91,8 @@ jobs:
         env:
           VERDICT: ${{ steps.verdict.outputs.verdict }}
           SCOPE_OUTCOME: ${{ steps.scope.outcome }}
-          SECURITY_OUTCOME: ${{ steps.security.outcome }}
+          PATTERN_OUTCOME: ${{ steps.pattern.outcome }}
+          GITLEAKS_OUTCOME: ${{ steps.gitleaks.outcome }}
         run: |
           {
             echo "<!-- night-shift-x-test-summary -->"
@@ -91,7 +102,8 @@ jobs:
             echo "- Head: \`$GITHUB_HEAD_REF\`"
             echo "- Base SHA: \`${{ github.event.pull_request.base.sha }}\`"
             echo "- Scope gate: \`$SCOPE_OUTCOME\`"
-            echo "- Security gate: \`$SECURITY_OUTCOME\`"
+            echo "- Secret-pattern gate: \`$PATTERN_OUTCOME\`"
+            echo "- Gitleaks: \`$GITLEAKS_OUTCOME\`"
             echo "- Verdict: **$VERDICT**"
             echo "- Cost: \`DATA_GAP\`"
             echo "- Merge authority: \`false\`"
