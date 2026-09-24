@@ -1,0 +1,14 @@
+{
+  "version": "0.1",
+  "mode": "CODE_ONLY_SINGLE_MODEL_SINGLE_CONCURRENCY",
+  "requiredLabel": "night-shift",
+  "authorizedLabelActors": ["madfrank17"],
+  "maxAttempts": 2,
+  "perTaskBudgetUsd": 5,
+  "nightlyBudgetUsd": 15,
+  "gracePeriodMinutes": 15,
+  "modelEscalationEnabled": false,
+  "mergeAllowed": false,
+  "deployAllowed": false,
+  "productionWriteAllowed": false
+}
