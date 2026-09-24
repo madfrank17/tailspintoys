@@ -1,0 +1,25 @@
+name: Night Shift probe contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.night-shift/**'
+      - '.github/workflows/night-shift-probe-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Run policy contract tests
+        run: node --test .night-shift/test/policy.test.mjs
+      - name: Validate n8n workflow structure
+        run: node .night-shift/test/validate-workflow.mjs
