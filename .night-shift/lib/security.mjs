@@ -3,7 +3,7 @@ export const secretRules = [
   { id: 'AWS_ACCESS_KEY', regex: /\bAKIA[0-9A-Z]{16}\b/g },
   { id: 'SLACK_TOKEN', regex: /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/g },
   { id: 'PRIVATE_KEY', regex: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g },
-  { id: 'GENERIC_SECRET_ASSIGNMENT', regex: /\b(?:api[_-]?key|secret|token|password)\s*[:=]\s*["']?[A-Za-z0-9_\-\/+=]{20,}["']?/gi }
+  { id: 'GENERIC_SECRET_ASSIGNMENT', regex: /\b(?:api[_-]?key|secret|token|password)\s*[:=]\s*["']?[A-Za-z0-9_/+=-]{20,}["']?/gi }
 ];
 
 export function detectSecretPatterns(text) {
