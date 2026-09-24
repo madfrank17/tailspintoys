@@ -1,0 +1,2 @@
+case: SCOPE_BLOCK
+intentional out-of-scope change for adversarial validation
