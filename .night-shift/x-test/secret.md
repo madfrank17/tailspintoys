@@ -1,0 +1,2 @@
+case: SECURITY_BLOCK
+synthetic-only: ghp_1234567890abcdefghijklmnopqrstuvwxyz
