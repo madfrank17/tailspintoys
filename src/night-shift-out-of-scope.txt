@@ -1,3 +1,4 @@
 case: SCOPE_BLOCK
 intentional out-of-scope change for adversarial validation
 rerun: secret-gate-v0.1.1
+rerun2: contract-fix
