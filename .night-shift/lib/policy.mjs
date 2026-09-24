@@ -17,7 +17,6 @@ export function evaluatePreflight({ issue, labelActor, config, existing, global,
   if (existing?.openPr) return { state: "SKIP_DUPLICATE", reason: "OPEN_PR_EXISTS", pr: existing.openPr };
   if (existing?.run && !terminalRunStates.has(existing.run.state)) return { state: "RESUME", reason: "NONTERMINAL_RUN_EXISTS", runId: existing.run.id };
   if (existing?.branch) return { state: "SKIP_DUPLICATE", reason: "BRANCH_EXISTS", branch: existing.branch };
-
   if (lock?.held && !lock?.expired) return { state: "WAIT", reason: "LOCK_HELD", lockOwner: lock.owner };
 
   return { state: "QUEUE", reason: "AUTHORIZED" };
@@ -31,6 +30,8 @@ export function classifyFailure(failure) {
 
 function retryBudgetAvailable({ attempts, maxAttempts, taskSpentUsd, taskBudgetUsd, nightlySpentUsd, nightlyBudgetUsd, now, deadlineAt, circuitOpen }) {
   if (attempts >= maxAttempts) return { ok: false, reason: "MAX_ATTEMPTS" };
+  if (taskSpentUsd == null) return { ok: false, reason: "TASK_COST_UNKNOWN" };
+  if (nightlySpentUsd == null) return { ok: false, reason: "NIGHTLY_COST_UNKNOWN" };
   if (Number(taskSpentUsd) >= Number(taskBudgetUsd)) return { ok: false, reason: "TASK_BUDGET" };
   const stop = evaluateGlobalStop({ now, deadlineAt, nightlySpentUsd, nightlyBudgetUsd, circuitOpen });
   if (stop.stop) return { ok: false, reason: stop.reason };
@@ -62,8 +63,29 @@ export function decideAfterFailure({ failure, attempts, config, spending, global
       ? { action: "ESCALATE_MODEL", classification, reason: "CAPABILITY_ESCALATION" }
       : { action: "NEEDS_HUMAN", classification, reason: "MODEL_ESCALATION_DISABLED" };
   }
-
   return { action: "NEEDS_HUMAN", classification, reason: "UNCLASSIFIED" };
+}
+
+function pathAllowed(path, allowedPaths) {
+  return allowedPaths.some(rule => rule.endsWith("/**") ? path.startsWith(rule.slice(0, -3)) : path === rule);
+}
+
+export function validateScope({ changedFiles, diffLines, scope }) {
+  const violations = [];
+  const outside = changedFiles.filter(path => !pathAllowed(path, scope.allowedPaths || []));
+  if (outside.length) violations.push({ kind: "PATH", files: outside });
+  if (changedFiles.length > Number(scope.maxChangedFiles)) violations.push({ kind: "FILE_COUNT", actual: changedFiles.length, limit: scope.maxChangedFiles });
+  if (Number(diffLines) > Number(scope.maxDiffLines)) violations.push({ kind: "DIFF_LINES", actual: Number(diffLines), limit: scope.maxDiffLines });
+  const dependencyFiles = changedFiles.filter(path => ["package.json","package-lock.json","pnpm-lock.yaml","yarn.lock"].includes(path));
+  if (scope.dependencyChanges === false && dependencyFiles.length) violations.push({ kind: "DEPENDENCY_CHANGE", files: dependencyFiles });
+  return violations.length ? { pass: false, state: "SCOPE_BLOCK", violations } : { pass: true, state: "PASS", violations: [] };
+}
+
+export function decideValidation({ functionalPass, secretScanPass, dependencyRiskPass = true, scopeResult }) {
+  if (!functionalPass) return { action: "NO_PR", state: "FUNCTIONAL_BLOCK" };
+  if (!secretScanPass || !dependencyRiskPass) return { action: "NO_PR", state: "SECURITY_BLOCK" };
+  if (!scopeResult?.pass) return { action: "NO_PR", state: "SCOPE_BLOCK" };
+  return { action: "PR_ALLOWED", state: "PASS" };
 }
 
 export function interruptionDecision({ globalStop, taskFinished, safeCheckpointAvailable, now, graceUntil }) {
@@ -78,6 +100,23 @@ export function finalizeRun(run) {
   return { ...run, lockReleased: true, finalized: true };
 }
 
+export function buildTaskSummary(run) {
+  return {
+    runId: run.runId,
+    issue: run.issue,
+    state: run.state,
+    pr: run.pr ?? null,
+    baseSha: run.baseSha ?? null,
+    attempts: Number(run.attempts || 0),
+    runtimeSeconds: run.runtimeSeconds ?? null,
+    costUsd: run.costUsd == null ? null : Number(run.costUsd),
+    validation: run.validation || {},
+    failureReason: run.failureReason || null,
+    changedFiles: run.changedFiles || [],
+    humanActionRequired: run.humanActionRequired || null,
+  };
+}
+
 export function buildMorningReport(runs) {
   const totals = runs.reduce((acc, run) => {
     acc.tasks += 1;
@@ -90,15 +129,7 @@ export function buildMorningReport(runs) {
   return {
     generatedFromExecutionRecords: true,
     totals: { ...totals, knownCostUsd: Number(totals.knownCostUsd.toFixed(2)) },
-    tasks: runs.map(run => ({
-      issue: run.issue,
-      state: run.state,
-      pr: run.pr || null,
-      ci: run.ci || null,
-      costUsd: run.costUsd == null ? null : Number(run.costUsd),
-      attempts: Number(run.attempts || 0),
-      failureReason: run.failureReason || null,
-    })),
+    tasks: runs.map(run => buildTaskSummary(run)),
   };
 }
 
