@@ -1,0 +1,39 @@
+{
+  "runId": "issue-15-copilot-2026-09-24",
+  "observedAt": "2026-09-24T07:26:00Z",
+  "repository": "madfrank17/tailspintoys",
+  "issue": 15,
+  "worker": "GitHub Copilot cloud agent",
+  "taskType": "CODE",
+  "dispatch": {
+    "assignee": "Copilot",
+    "issueToDraftPrObserved": true
+  },
+  "pullRequest": {
+    "number": 16,
+    "state": "OPEN",
+    "draft": true,
+    "merged": false,
+    "changedFiles": [".night-shift/probe-target.md"],
+    "additions": 3,
+    "deletions": 0
+  },
+  "acceptance": {
+    "onlyTargetFileChanged": true,
+    "requiredLinesPresent": true,
+    "unmergedPrForHumanReview": true
+  },
+  "validation": {
+    "artifactDiff": "PASS",
+    "repositoryCi": "ACTION_REQUIRED",
+    "result": "PARTIAL"
+  },
+  "costUsd": null,
+  "costEvidence": "DATA_GAP",
+  "liveN8nExecutionValidated": false,
+  "notes": [
+    "GitHub connector could assign the exact copilot-swe-agent[bot] identity, which surfaced as Copilot.",
+    "The Copilot PR workflow run requires an external GitHub Actions approval; no approval was performed by this probe.",
+    "No merge or deploy occurred."
+  ]
+}
