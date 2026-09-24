@@ -81,20 +81,21 @@ export function finalizeRun(run) {
 export function buildMorningReport(runs) {
   const totals = runs.reduce((acc, run) => {
     acc.tasks += 1;
-    acc.costUsd += Number(run.costUsd || 0);
     acc.attempts += Number(run.attempts || 0);
+    if (run.costUsd == null) acc.unknownCostCount += 1;
+    else acc.knownCostUsd += Number(run.costUsd);
     return acc;
-  }, { tasks: 0, costUsd: 0, attempts: 0 });
+  }, { tasks: 0, knownCostUsd: 0, unknownCostCount: 0, attempts: 0 });
 
   return {
     generatedFromExecutionRecords: true,
-    totals: { ...totals, costUsd: Number(totals.costUsd.toFixed(2)) },
+    totals: { ...totals, knownCostUsd: Number(totals.knownCostUsd.toFixed(2)) },
     tasks: runs.map(run => ({
       issue: run.issue,
       state: run.state,
       pr: run.pr || null,
       ci: run.ci || null,
-      costUsd: Number(run.costUsd || 0),
+      costUsd: run.costUsd == null ? null : Number(run.costUsd),
       attempts: Number(run.attempts || 0),
       failureReason: run.failureReason || null,
     })),
