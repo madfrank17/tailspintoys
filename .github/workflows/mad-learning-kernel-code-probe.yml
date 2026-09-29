@@ -1,0 +1,39 @@
+name: MAD Learning Kernel CODE probe (read-only preview)
+on:
+  workflow_run:
+    workflows: ["Run tests"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [routine, learning]
+        default: routine
+      run_id:
+        description: Completed Run tests ID; required for learning preview
+        type: string
+        default: ''
+permissions:
+  contents: read
+  actions: read
+  issues: read
+  pull-requests: read
+concurrency:
+  group: mad-learning-kernel-code-marker
+  cancel-in-progress: false
+jobs:
+  preview:
+    if: github.repository == 'madfrank17/tailspintoys'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/mad-learning-kernel
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea9
+        with:
+          script: |
+            const {default: run} = await import(`${process.env.GITHUB_WORKSPACE}/.github/mad-learning-kernel/run.mjs`);
+            await run({github, context, core});
