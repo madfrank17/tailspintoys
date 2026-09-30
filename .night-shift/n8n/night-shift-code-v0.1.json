@@ -1,0 +1,25 @@
+{
+  "name": "MAD Night Shift CODE-only Reality Probe v0.1",
+  "active": false,
+  "nodes": [
+    {"parameters":{},"id":"1","name":"Manual Probe Input","type":"n8n-nodes-base.manualTrigger","typeVersion":1,"position":[0,0]},
+    {"parameters":{"jsCode":"// Contract placeholder: call the versioned policy logic represented in .night-shift/lib/policy.mjs.\n// Live GitHub credentials are intentionally not embedded in this export.\nreturn items;"},"id":"2","name":"Authority + Global Stop + Idempotency","type":"n8n-nodes-base.code","typeVersion":2,"position":[220,0]},
+    {"parameters":{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict"},"conditions":[],"combinator":"and"}},"id":"3","name":"Eligible?","type":"n8n-nodes-base.if","typeVersion":2,"position":[440,0]},
+    {"parameters":{},"id":"4","name":"Dispatch Placeholder","type":"n8n-nodes-base.noOp","typeVersion":1,"position":[660,-100]},
+    {"parameters":{},"id":"5","name":"Stop / Needs Human","type":"n8n-nodes-base.noOp","typeVersion":1,"position":[660,100]},
+    {"parameters":{},"id":"6","name":"Finally Release Lock","type":"n8n-nodes-base.noOp","typeVersion":1,"position":[880,0]},
+    {"parameters":{},"id":"7","name":"Morning Report Placeholder","type":"n8n-nodes-base.noOp","typeVersion":1,"position":[1100,0]},
+    {"parameters":{},"id":"8","name":"Eval Record Placeholder","type":"n8n-nodes-base.noOp","typeVersion":1,"position":[1320,0]}
+  ],
+  "connections": {
+    "Manual Probe Input":{"main":[[{"node":"Authority + Global Stop + Idempotency","type":"main","index":0}]]},
+    "Authority + Global Stop + Idempotency":{"main":[[{"node":"Eligible?","type":"main","index":0}]]},
+    "Eligible?":{"main":[[{"node":"Dispatch Placeholder","type":"main","index":0}],[{"node":"Stop / Needs Human","type":"main","index":0}]]},
+    "Dispatch Placeholder":{"main":[[{"node":"Finally Release Lock","type":"main","index":0}]]},
+    "Stop / Needs Human":{"main":[[{"node":"Finally Release Lock","type":"main","index":0}]]},
+    "Finally Release Lock":{"main":[[{"node":"Morning Report Placeholder","type":"main","index":0}]]},
+    "Morning Report Placeholder":{"main":[[{"node":"Eval Record Placeholder","type":"main","index":0}]]}
+  },
+  "settings":{"executionOrder":"v1"},
+  "meta":{"probeVersion":"0.1","productionSafe":false,"scope":"CODE_ONLY_SINGLE_MODEL_SINGLE_CONCURRENCY","liveN8nExecutionValidated":false}
+}

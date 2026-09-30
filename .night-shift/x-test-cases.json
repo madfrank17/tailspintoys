@@ -1,0 +1,20 @@
+{
+  "probe/night-shift-x-pass": {
+    "allowedPaths": [".night-shift/x-test/pass.md"],
+    "maxChangedFiles": 1,
+    "maxDiffLines": 10,
+    "dependencyChanges": false
+  },
+  "probe/night-shift-x-secret": {
+    "allowedPaths": [".night-shift/x-test/secret.md"],
+    "maxChangedFiles": 1,
+    "maxDiffLines": 10,
+    "dependencyChanges": false
+  },
+  "probe/night-shift-x-scope": {
+    "allowedPaths": [".night-shift/x-test/allowed.md"],
+    "maxChangedFiles": 1,
+    "maxDiffLines": 10,
+    "dependencyChanges": false
+  }
+}

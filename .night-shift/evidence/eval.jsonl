@@ -1,0 +1,1 @@
+{"runId":"issue-15-copilot-2026-09-24","issue":15,"taskType":"CODE","model":"github-copilot-cloud-agent","attemptCount":1,"failureClass":null,"retryCount":0,"modelEscalation":false,"runtimeSeconds":null,"costUsd":null,"validationResult":"PARTIAL","finalExecutionState":"PR_OPEN","humanOutcome":null,"repairMinutes":null,"mergeStatus":"UNMERGED","ci":"ACTION_REQUIRED"}
